@@ -15,8 +15,10 @@ def main(args=None):
     parser.add_argument("-i","--input",dest='input', help='single input file to process ')
     parser.add_argument("-l","--list",dest='list', help='list of files to process ')
     parser.add_argument("-v","--verbose", action='store_true', default=False, dest='verbose', help='run in high verbosity mode')
+    parser.add_argument("-mc",default=False, action="store_true", dest='mc', help='use this flag for MC data')
     #parser.add_argument("-q","--quiet", action='store_true', default=False, dest='quiet', help='suppress a lot of output, quiet mode')
     parser.add_argument("-o","--output",default="skimmed_data/", type=str, dest='output', help='name of output directory')
+    parser.add_argument("-d","--debug", default=False, dest='debug', help='activate debig mode to select a small subsample of events for the analysis (1000)')
 
     opts = parser.parse_args(args)
     
