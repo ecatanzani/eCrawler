@@ -2,8 +2,6 @@
 
 import os
 import sys
-import numpy as np
-from array import array
 from datetime import datetime
 from argparse import ArgumentParser
 
@@ -20,10 +18,7 @@ def main(args=None):
     parser.add_argument("-o","--output",default="skimmed_data/", type=str, dest='output', help='name of output directory')
 
     opts = parser.parse_args(args)
-
-    #Setting input files
-    inp = opts.input
-
+    
     #Setting output diretcory
     if not os.path.isdir(opts.output):
         try:
@@ -34,6 +29,10 @@ def main(args=None):
     #Load analysis functions
     sys.path.append("Stuff")
     from Inspector import findElectrons
+    from runParameters import analysisParamters
+
+    if(opts.verbose):
+        analysisParamters(opts)
 
     findElectrons(opts)
 
