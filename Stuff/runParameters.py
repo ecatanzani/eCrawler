@@ -8,5 +8,6 @@ def analysisParamters(opts):
 
     print('Output directory: {}'.format(opts.output))
     print('Verbosity: {}'.format(opts.verbose))
+    print('Debug: {}'.format(opts.debug))
 
-    print("\n ********* Analysis parameters *********\n\n")
+    print("\n ***************************************\n\n")
