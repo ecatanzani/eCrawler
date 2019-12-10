@@ -42,13 +42,44 @@ def findElectrons(opts):
             if os.path.isfile(f):
                 dmpch.Add(f)
                 if opts.verbose:
-                    print ifile , f
+                    print('\nInput file read: {} -> {}'.format(ifile,f))
     else:
         DMPSW.IOSvc.Set("InData/Read",opts.input)
         if os.path.isfile(opts.input):
             dmpch.Add(opts.input)
             if opts.verbose:
-                print opts.input
-     
+                print('\nInput file read: {}'.format(opts.input))
+    
+    #Defining the total number of events
+    nevents = dmpch.GetEntries()
+
+    if opts.verbose:
+        print('\nTotal number of events: {}'.format(nevents))
+        print("\nPrinting the chain...\n")
+        dmpch.Print()
+    
+    ####### Setting the output directory to the chain
+    dmpch.SetOutputDir(abspath(opts.output),"electrons")
+
+    ####### Processing input files
+
+    #Filtering for SAA
+    if not opts.mc:
+        DMPSW.IOSvc.Set("OutData/NoOutput", "True")
+        DMPSW.IOSvc.Initialize()
+        pFilter = DmpFilterOrbit("EventHeader")
+        pFilter.ActiveMe()
+    
+    #Starting loop on files
+
+    if opts.debug:
+        if opts.verbosity:
+            print('\nDebug mode activated... the number of chain events is limited to 1000')
+        nevents = 1000
+
+    for iev in xrange(0,nevents):
+        if opts.mc:
+            DmpVSvc.gPsdECor.SetMCflag(1)
+        pev=dmpch.GetDmpEvent(iev)
     
         
