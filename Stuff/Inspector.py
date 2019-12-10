@@ -33,15 +33,22 @@ def findElectrons(opts):
 
     #Creating DAMPE chain for input files
     dmpch = DmpChain("CollectionTree")
-
+    
     #Reading input files
-    files = [f.replace("\n","") for f in open(opts.input,'r').readlines()]
-
-    for ifile, f in enumerate(files):
-        DMPSW.IOSvc.Set("InData/Read" if ifile == 0 else "InData/ReadMore",f)
-        print f
-        if os.path.isfile(f):
-            dmpch.Add(f)
+    if not opts.input:
+        files = [f.replace("\n","") for f in open(opts.list,'r').readlines()]
+        for ifile, f in enumerate(files):
+            DMPSW.IOSvc.Set("InData/Read" if ifile == 0 else "InData/ReadMore",f)
+            if os.path.isfile(f):
+                dmpch.Add(f)
+                if opts.verbose:
+                    print ifile , f
+    else:
+        DMPSW.IOSvc.Set("InData/Read",opts.input)
+        if os.path.isfile(opts.input):
+            dmpch.Add(opts.input)
             if opts.verbose:
-                print ifile , f
+                print opts.input
+     
+    
         
