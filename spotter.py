@@ -17,15 +17,17 @@ def main(args=None):
     parser.add_argument("-v","--verbose", action='store_true', default=False, dest='verbose', help='run in high verbosity mode')
     parser.add_argument("-mc",default=False, action="store_true", dest='mc', help='use this flag for MC data')
     #parser.add_argument("-q","--quiet", action='store_true', default=False, dest='quiet', help='suppress a lot of output, quiet mode')
-    parser.add_argument("-o","--output",default="skimmed_data/", type=str, dest='output', help='name of output directory')
-    parser.add_argument("-d","--debug", default=False, dest='debug', help='activate debig mode to select a small subsample of events for the analysis (1000)')
+    parser.add_argument("-o","--outputDir",default="skimmed_data/", type=str, dest='outputDir', help='name of output directory')
+    parser.add_argument("-of","--outputFile",default="skimmed_data/skimmed.root", type=str, dest='outputFile', help='name of output root file')
+    parser.add_argument("-d","--debug", action='store_true', default=False, dest='debug', help='activate debig mode to select a small subsample of events for the analysis (1000)')
+    parser.add_argument("-data","--data",default=True, action="store_true", dest='data', help='save analysis results in a root file')
 
     opts = parser.parse_args(args)
     
     #Setting output diretcory
-    if not os.path.isdir(opts.output):
+    if not os.path.isdir(opts.outputDir):
         try:
-            os.mkdir(opts.output)
+            os.mkdir(opts.outputDir)
         except OSError:
             print ("Creation of the output directory %s failed" % opts.output)
 
