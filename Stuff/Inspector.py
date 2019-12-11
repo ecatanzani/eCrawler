@@ -59,9 +59,38 @@ def findElectrons(opts):
         dmpch.Print()
     
     ####### Setting the output directory to the chain
-    dmpch.SetOutputDir(abspath(opts.output),"electrons")
+    dmpch.SetOutputDir(abspath(opts.outputDir),"electrons")
 
     ####### Processing input files
+
+    ###Histos
+
+    #Defining log binning
+
+    #np.logspace binning
+    nBins=1000
+    eMax=6
+    eMin=0
+    eBinning = np.logspace(eMin, eMax, num=(nBins+1))
+    
+    #custom binning
+    ''' 
+    nBins = 1000
+    eMin=0.1
+    eMax=1000000
+    EDmax = []
+    EDEdge = [] 
+    EDstepX=np.log10(eMax/eMin)/nBins
+    for iedge in range(0, nBins):
+        EDEdge.append(eMin*pow(10,iedge*EDstepX))
+        EDmax.append(eMin*pow(10,(iedge+1)*EDstepX))
+    EDEdge.append(EDmax[-1])
+    Edges= array('d',EDEdge) # this makes a bound array for TH1F
+    '''
+
+    h_energy = TH1F("h_energy","h_energy",nBins,eBinning)
+
+    ###
 
     #Filtering for SAA
     if not opts.mc:
@@ -73,7 +102,7 @@ def findElectrons(opts):
     #Starting loop on files
 
     if opts.debug:
-        if opts.verbosity:
+        if opts.verbose:
             print('\nDebug mode activated... the number of chain events is limited to 1000')
         nevents = 1000
 
@@ -81,5 +110,13 @@ def findElectrons(opts):
         if opts.mc:
             DmpVSvc.gPsdECor.SetMCflag(1)
         pev=dmpch.GetDmpEvent(iev)
+        etot=pev.pEvtBgoRec().GetTotalEnergy()/1000.
+        h_energy.Fill(etot)
+    
+    if opts.data:
+        tf_skim = TFile(opts.outputFile,"RECREATE")
+        h_energy.Write()
+        tf_skim.Close()
+
     
         
