@@ -88,7 +88,30 @@ def findElectrons(opts):
     Edges= array('d',EDEdge) # this makes a bound array for TH1F
     '''
 
-    h_energy = TH1F("h_energy","h_energy",nBins,eBinning)
+    #Pointing
+    h_terrestrial_lat_vs_long =  TH2F("h_terrestrial_lat_vs_long","latitude vs longitude",360,0,360,180,-90,90)
+
+    ## Energy
+
+    h_energy_all = TH1F("h_energy_all","all particle energy",nBins,eBinning)
+    h_energyCut = TH1F("h_energyCut","all particle energy - 20 GeV cut",nBins,eBinning)
+    h_energyCut_SAAcut = TH1F("h_energyCut_SAAcut","all particle energy - 20 GeV cut (no SAA)",nBins,eBinning)
+    ##BGO
+
+    h_energyBGOl=[]
+    for BGO_idxl in range(14):
+        histoName = "h_energyBGOl_" + str(BGO_idxl)
+        histoTitle = "BGO energy deposit layer " + str(BGO_idxl)
+        tmpHisto = TH1F(histoName,histoTitle,1000,0,1e+6)
+        h_energyBGOl.append(tmpHisto)
+
+    h_BGOl_maxEnergyFraction = TH1F("h_BGOl_maxEnergyFraction","Fraction of the maximum released energy",100,0,1)
+
+    ###
+
+    ### Analysis cuts
+
+    eCut = 50       #Energy cut in GeV
 
     ###
 
@@ -105,17 +128,58 @@ def findElectrons(opts):
         if opts.verbose:
             print('\nDebug mode activated... the number of chain events is limited to 1000')
         nevents = 1000
+    
+    for iev in xrange(nevents):
 
-    for iev in xrange(0,nevents):
         if opts.mc:
             DmpVSvc.gPsdECor.SetMCflag(1)
         pev=dmpch.GetDmpEvent(iev)
+
+        #Get latitude and longitude
+        longitude = pev.pEvtAttitude().lon_geo
+        latitude = pev.pEvtAttitude().lat_geo
+
+        #Get particle total energy
         etot=pev.pEvtBgoRec().GetTotalEnergy()/1000.
-        h_energy.Fill(etot)
-    
+        h_energy_all.Fill(etot)
+        if etot < eCut:
+            continue
+        h_energyCut.Fill(etot)
+
+        #Get BGO energy deposit for each layer
+        v_bgolayer  = np.array([pev.pEvtBgoRec().GetELayer(ibgo) for ibgo in range(14)])
+        
+        for BGO_idxl in range(14):
+            h_energyBGOl[BGO_idxl].Fill(v_bgolayer[BGO_idxl])  
+
+        #Fraction of the maximum energy deposit of the particle crossing the BGO
+        h_BGOl_maxEnergyFraction.Fill(np.max(v_bgolayer)/1000./etot)
+
+        #SAA filter
+        if not opts.mc:
+            inSAA = pFilter.IsInSAA(pev.pEvtHeader().GetSecond())
+            #inSAA = False
+            if (inSAA): 
+                continue
+            h_energyCut_SAAcut.Fill(etot)
+            h_terrestrial_lat_vs_long.Fill(longitude,latitude)
+
+    ### Writing output files to file
+
     if opts.data:
+
         tf_skim = TFile(opts.outputFile,"RECREATE")
-        h_energy.Write()
+
+        h_energy_all.Write()
+        h_energyCut.Write()
+        h_energyCut_SAAcut.Write()
+
+        for BGO_idxl in range(14):
+            h_energyBGOl[BGO_idxl].Write()
+            
+        h_BGOl_maxEnergyFraction.Write()
+        h_terrestrial_lat_vs_long.Write()
+
         tf_skim.Close()
 
     
