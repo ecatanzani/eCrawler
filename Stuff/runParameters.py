@@ -6,8 +6,12 @@ def analysisParamters(opts):
     else:
         print('Input single file: {}'.format(opts.input))
 
-    print('Output directory: {}'.format(opts.output))
+    print('Output directory: {}'.format(opts.outputDir))
+    print('Output file: {}'.format(opts.outputFile))
     print('Verbosity: {}'.format(opts.verbose))
     print('Debug: {}'.format(opts.debug))
 
+    if opts.ms:
+        print("\n MC flag activated")
+    
     print("\n ***************************************\n\n")
