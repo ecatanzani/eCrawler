@@ -1,3 +1,21 @@
+def searchForTrack(
+                    common_id,
+                    lTrackIDX,
+                    lTrackIDY,
+                    residueXmin,
+                    residueYmin,
+                    track_ID
+                    ):
+    res_min = 1000
+    for ids in xrange(0, len(common_id)):
+        pos_X = lTrackIDX.index(common_id[ids])
+        pos_Y = lTrackIDY.index(common_id[ids])
+        res_tot = abs(residueXmin[pos_X]) + abs(residueYmin[pos_Y])
+        if(res_min > res_tot):
+            res_min = res_tot
+            track_ID = common_id[ids]
+
+
 def findElectrons(opts):
     
     ### Load Python modules
@@ -155,7 +173,10 @@ def findElectrons(opts):
 
     eCut = 50       #Energy cut in GeV
 
-    ###
+    ### DAMPE geometry
+
+    BGOzTop = 46.
+    BGOzBot = 448.
 
     #Filtering for SAA
     if not opts.mc:
@@ -207,7 +228,11 @@ def findElectrons(opts):
         #Fraction of the maximum energy deposit of the particle crossing the BGO
         h_BGOl_maxEnergyFraction.Fill(np.max(v_bgolayer)/1000./etot)
 
+        #BGO acceptance projection
         
+        projectionX_BGO_BGOTop =  pev.pEvtBgoRec().GetInterceptXZ() +BGOzTop  * pev.pEvtBgoRec().GetSlopeXZ()
+        projectionY_BGO_BGOTop =  pev.pEvtBgoRec().GetInterceptYZ() +BGOzTop  * pev.pEvtBgoRec().GetSlopeYZ()
+
 
         #SAA filter
         if not opts.mc:
@@ -234,6 +259,17 @@ def findElectrons(opts):
         
         h_STK_nTracks.Fill(ntracks)
         h_energyCut_Track.Fill(etot)
+
+        res_X_min = 1000
+        res_Y_min = 1000
+        trackID_X = -9
+        trackID_Y = -9
+
+        lTrackIDX = []
+        lTrackIDY = []
+
+        residueXmin = []
+        residueYmin = []
 
         for iTrack in range(ntracks):
             tmpTrack = pev.pStkKalmanTrack(iTrack)
@@ -263,14 +299,33 @@ def findElectrons(opts):
             if l0ClusterX == False and l0ClusterY == False:
                 continue
 
+            #### Tracks characteristics
+
             theta_stk =math.acos(tmpTrack.getDirection().CosTheta())*180./math.pi;
 
             delta_theta_STK_BGO = theta_stk - theta_bgo
 
+            #STK impact point
+            trackImpactPointX = tmpTrack.getImpactPoint().x()
+            trackImpactPointY = tmpTrack.getImpactPoint().y()
+
+            #Track projections
+            trackProjX = tmpTrack.getDirection().x()*(BGOzTop - tmpTrack.getImpactPoint().z()) + tmpTrack.getImpactPoint().x()
+            trackProjY = tmpTrack.getDirection().y()*(BGOzTop - tmpTrack.getImpactPoint().z()) + tmpTrack.getImpactPoint().y()
+
+            #Track residues
+            resX_STK_BGO = projectionX_BGO_BGOTop - trackProjX
+            resY_STK_BGO = projectionY_BGO_BGOTop - trackProjY
+
+            resX_STK_BGO_top = trackImpactPointX - (pev.pEvtBgoRec().GetInterceptXZ() + tmpTrack.getImpactPoint().z() * pev.pEvtBgoRec().GetSlopeXZ())
+            resY_STK_BGO_top = trackImpactPointY - (pev.pEvtBgoRec().GetInterceptYZ() + tmpTrack.getImpactPoint().z() * pev.pEvtBgoRec().GetSlopeYZ())
+
+            ####
+
             h_ThetaSTK.Fill(theta_stk)
             h_deltaTheta.Fill(delta_theta_STK_BGO)
 
-            h_imapctPointSTK.Fill(tmpTrack.getImpactPoint().x(),tmpTrack.getImpactPoint().y())
+            h_imapctPointSTK.Fill(trackImpactPointX,trackImpactPointY)
                 
             h_resX_STK_BGO.Fill(tmpTrack.getImpactPoint().x() - (pev.pEvtBgoRec().GetInterceptXZ() + tmpTrack.getImpactPoint().z() * pev.pEvtBgoRec().GetSlopeXZ()))
             h_resY_STK_BGO.Fill(tmpTrack.getImpactPoint().y() - (pev.pEvtBgoRec().GetInterceptYZ() + tmpTrack.getImpactPoint().z() * pev.pEvtBgoRec().GetSlopeYZ()))
@@ -278,11 +333,110 @@ def findElectrons(opts):
             if abs(theta_stk - theta_bgo) > 25:
                 continue
                     
-            #Now I need to select the track to extract the charge from the PSD and STK
+            #Selecting good tracks for charge measurement
 
-            #Up to now I have the theta extracted from the BGO and STK
+            if abs(resX_STK_BGO_top) < 200 and abs(resX_STK_BGO) < 60:
+                lTrackIDX.append(tmpTrack)
+                residueXmin.append(res_X_min)
+                if res_X_min > abs(resX_STK_BGO_top):
+                    res_X_min = abs(resX_STK_BGO_top)
+                    trackID_X = iTrack
+                    
 
-                        
+            if abs(resY_STK_BGO_top) < 200 and abs(resY_STK_BGO) < 60:
+                lTrackIDY.append(tmpTrack)
+                residueYmin.append(res_Y_min)
+                if res_Y_min > abs(resY_STK_BGO_top):
+                    res_Y_min = abs(resY_STK_BGO_top)
+                    trackID_Y = iTrack
+
+        if(trackID_X == -9): 
+            continue
+        if(trackID_Y == -9): 
+            continue
+
+        track_ID = -9
+        #print trackID_X
+        
+        if(trackID_X == trackID_Y):
+            track_ID = trackID_X
+        else:
+            trackX = pev.pStkKalmanTrack(trackID_X)
+            trackY = pev.pStkKalmanTrack(trackID_Y)
+            chi2X = trackX.getChi2() /(trackX.getNhitX()+trackX.getNhitY()-4);
+            chi2Y = trackY.getChi2() /(trackY.getNhitX()+trackY.getNhitY()-4);
+            npointX = trackX.GetNPoints()
+            npointY = trackY.GetNPoints()
+
+            if(npointX == npointY or abs(npointX - npointY) == 1):
+                if(chi2X < chi2Y):
+                    if trackID_X in lTrackIDY:
+                        track_ID = trackID_X
+                    elif trackID_Y in lTrackIDX:
+                            track_ID = trackID_Y
+                    else:
+                        common_id = list(set(lTrackIDX).intersection(lTrackIDY))
+                        searchForTrack(
+                                        common_id,
+                                        lTrackIDX,
+                                        lTrackIDY,
+                                        residueXmin,
+                                        residueYmin,
+                                        track_ID
+                                    )
+                else:
+                    if trackID_Y in lTrackIDX:
+                        track_ID = trackID_Y
+                    elif trackID_X in lTrackIDY:
+                            track_ID = trackID_X
+                    else:
+                        common_id = list(set(lTrackIDX).intersection(lTrackIDY))
+                        searchForTrack(
+                                        common_id,
+                                        lTrackIDX,
+                                        lTrackIDY,
+                                        residueXmin,
+                                        residueYmin,
+                                        track_ID
+                                    )
+            else:
+                if(npointX > npointY):
+                    if trackID_X in lTrackIDY:
+                        track_ID = trackID_X
+                    elif trackID_Y in lTrackIDX:
+                            track_ID = trackID_Y
+                    else:
+                        common_id = list(set(lTrackIDX).intersection(lTrackIDY))
+                        searchForTrack(
+                                        common_id,
+                                        lTrackIDX,
+                                        lTrackIDY,
+                                        residueXmin,
+                                        residueYmin,
+                                        track_ID
+                                    )
+                else:
+                    if trackID_Y in lTrackIDX:
+                        track_ID = trackID_Y
+                    elif trackID_X in lTrackIDY:
+                            track_ID = trackID_X
+                    else:
+                        common_id = list(set(lTrackIDX).intersection(lTrackIDY))
+                        searchForTrack(
+                                        common_id,
+                                        lTrackIDX,
+                                        lTrackIDY,
+                                        residueXmin,
+                                        residueYmin,
+                                        track_ID
+                                    )
+        if(track_ID == -9): 
+            continue
+
+        
+
+
+
 
 
 
