@@ -116,6 +116,7 @@ def findElectrons(opts):
     h_energyCut_SAAcut = TH1F("h_energyCut_SAAcut","all particle energy - 20 GeV cut (no SAA)",nBins,eBinning)
     h_energyCut_noTrack = TH1F("h_energyCut_noTrack","all particle energy - 20 GeV cut (NO TRACK)",nBins,eBinning)
     h_energyCut_Track = TH1F("h_energyCut_Track","all particle energy - 20 GeV cut (TRACK)",nBins,eBinning)
+    h_energyCut_TrackMatch = TH1F("h_energyCut_TrackMatch","all particle energy - 20 GeV cut (TRACK match)",nBins,eBinning)
     
     ##BGO
     h_energyBGOl=[]  #energy of BGO vertical layer (single vertical plane)
@@ -166,6 +167,9 @@ def findElectrons(opts):
     h_resY_STK_BGO = TH1F("h_resY_STK_BGO","BGO/STK residue layer Y",200,-1000,1000)
 
     h_imapctPointSTK = TH2F("h_imapctPointSTK","STK impact point",1000,-500,500,1000,-500,500)
+
+    h_stk_chargeClusterX = TH1F("h_stk_chargeClusterX","STK charge on cluster X",10000,0,10000)
+    h_stk_chargeClusterY = TH1F("h_stk_chargeClusterY","STK charge on cluster Y",10000,0,10000)
 
     ###
 
@@ -433,11 +437,27 @@ def findElectrons(opts):
         if(track_ID == -9): 
             continue
 
+        h_energyCut_TrackMatch.Fill(etot)
+
+        #Select the matched track
+        track_sel = pev.pStkKalmanTrack(track_ID)
+        theta_track_sel =math.acos(track_sel.getDirection().CosTheta())*180./math.pi;
+        deltaTheta_rec_sel = theta_bgo - theta_track_sel
+        track_correction = track_sel.getDirection().CosTheta();
+
+        cluChargeX = -1000
+        cluChargeY = -1000
+
+        for iclu in xrange(0,track_sel.GetNPoints()):
+            clux = track_sel.pClusterX(iclu)
+            cluy = track_sel.pClusterY(iclu)
+            if (clux and clux.getPlane() == 0):
+                cluChargeX = clux.getEnergy()*track_correction
+            if (cluy and cluy.getPlane() == 0):
+                cluChargeY = cluy.getEnergy()*track_correction
         
-
-
-
-
+        h_stk_chargeClusterX.Fill(cluChargeX)
+        h_stk_chargeClusterY.Fill(cluChargeY)
 
 
 
@@ -453,6 +473,7 @@ def findElectrons(opts):
         h_energyCut_SAAcut.Write()
         h_energyCut_noTrack.Write()
         h_energyCut_Track.Write()
+        h_energyCut_TrackMatch.Write()
 
         for BGO_idxl in range(14):
             h_energyBGOl[BGO_idxl].Write()
@@ -477,6 +498,9 @@ def findElectrons(opts):
         h_imapctPointSTK.Write()
         h_resX_STK_BGO.Write()
         h_resY_STK_BGO.Write()
+
+        h_stk_chargeClusterX.Write()
+        h_stk_chargeClusterY.Write()
 
         tf_skim.Close()
 
