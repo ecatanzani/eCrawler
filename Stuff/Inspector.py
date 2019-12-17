@@ -171,6 +171,22 @@ def findElectrons(opts):
     h_stk_chargeClusterX = TH1F("h_stk_chargeClusterX","STK charge on cluster X",10000,0,10000)
     h_stk_chargeClusterY = TH1F("h_stk_chargeClusterY","STK charge on cluster Y",10000,0,10000)
 
+    ##PSD
+
+    h_psd_ChargeX = []
+    for lidx in range (2):
+        histoName = "h_psd_ChargeX_l" + str(lidx)
+        histoTitle = "PSD X charge layer " + str(lidx)
+        tmpHisto = TH1F(histoName,histoTitle,10000,0,10000)
+        h_psd_ChargeX.append(tmpHisto)
+
+    h_psd_ChargeY = []
+    for lidx in range (2):
+        histoName = "h_psd_ChargeY_l" + str(lidx)
+        histoTitle = "PSD Y charge layer " + str(lidx)
+        tmpHisto = TH1F(histoName,histoTitle,10000,0,10000)
+        h_psd_ChargeY.append(tmpHisto)
+
     ###
 
     ### Analysis cuts
@@ -274,6 +290,8 @@ def findElectrons(opts):
 
         residueXmin = []
         residueYmin = []
+
+        #Loop on STK tracks to get the STK charge measurement
 
         for iTrack in range(ntracks):
             tmpTrack = pev.pStkKalmanTrack(iTrack)
@@ -460,6 +478,164 @@ def findElectrons(opts):
         h_stk_chargeClusterY.Fill(cluChargeY)
 
 
+        #Loop on PSD hits to get PSD charge measurement
+        
+        '''
+
+        #PSD fiducial volume cut
+
+        psd_YZ_top = -324.7
+        psd_XZ_top = -298.5
+        stk_to_psd_topY = (track_sel.getDirection().y()*(psd_YZ_top - track_sel.getImpactPoint().z()) + track_sel.getImpactPoint().y())
+        stk_to_psd_topX = (track_sel.getDirection().x()*(psd_XZ_top - track_sel.getImpactPoint().z()) + track_sel.getImpactPoint().x())
+
+        if(abs(stk_to_psd_topX) > 400.): 
+            continue
+        if(abs(stk_to_psd_topY) > 400.): 
+            continue
+
+        '''
+       
+
+        PSDXlayer0 = -298.5
+        PSDXlayer1 = -284.5
+
+        PSDYlayer0 = -324.7
+        PSDYlayer1 = -310.7
+        
+        psdChargeX     = [[]for _ in range(2)]
+        psdGIDX        = [[]for _ in range(2)]
+        psdPathlengthX = [[]for _ in range(2)]
+        psdPositionX   = [[]for _ in range(2)]
+
+        psdChargeY     = [[]for _ in range(2)]
+        psdGIDY        = [[]for _ in range(2)]
+        psdPathlengthY = [[]for _ in range(2)]
+        psdPositionY   = [[]for _ in range(2)]
+
+        for lPSD in xrange(0,pev.NEvtPsdHits()):
+            
+            if pev.pEvtPsdHits().IsHitMeasuringX(lPSD):
+                crossingX = False
+                lenghtX = [-99999.,-99999.]
+                array_lenghtX = array('d',lenghtX)
+
+                if(pev.pEvtPsdHits().GetHitZ(lPSD) == PSDXlayer0):
+                    npsdX = 0
+                if(pev.pEvtPsdHits().GetHitZ(lPSD)== PSDXlayer1):
+                    npsdX = 1
+                
+                if not opts.mc:
+                    crossingX = DmpVSvc.gPsdECor.GetPathLengthPosition(pev.pEvtPsdHits().fGlobalBarID[lPSD],track_sel.getDirection(),track_sel.getImpactPoint(), array_lenghtX)
+
+                if crossingX:
+                    psdChargeX[npsdX].append(pev.pEvtPsdHits().fEnergy[lPSD]) 
+                    psdGIDX[npsdX].append(pev.pEvtPsdHits().fGlobalBarID[lPSD]) 
+                    psdPathlengthX[npsdX].append(array_lenghtX[1])
+                    psdPositionX[npsdX].append(pev.pEvtPsdHits().GetHitX(lPSD))
+            
+            elif pev.pEvtPsdHits().IsHitMeasuringY(lPSD):
+                crossingY = False
+                lenghtY = [-99999.,-99999.]
+                array_lenghtY = array('d',lenghtY)
+
+                if(pev.pEvtPsdHits().GetHitZ(lPSD) == PSDYlayer0):
+                    npsdY = 0
+                if(pev.pEvtPsdHits().GetHitZ(lPSD)== PSDYlayer1):
+                    npsdY = 1
+                
+                if not opts.mc:
+                    crossingY = DmpVSvc.gPsdECor.GetPathLengthPosition(pev.pEvtPsdHits().fGlobalBarID[lPSD],track_sel.getDirection(),track_sel.getImpactPoint(), array_lenghtY)
+
+                if crossingY:
+                    psdChargeY[npsdY].append(pev.pEvtPsdHits().fEnergy[lPSD]) 
+                    psdGIDY[npsdY].append(pev.pEvtPsdHits().fGlobalBarID[lPSD]) 
+                    psdPathlengthY[npsdY].append(array_lenghtY[1])
+                    psdPositionY[npsdY].append(pev.pEvtPsdHits().GetHitY(lPSD))
+        
+        '''
+        print psdChargeX
+        print psdGIDX
+        print psdPathlengthX
+        print psdPositionX
+
+        print psdChargeY
+        print psdGIDY
+        print psdPathlengthY
+        print psdPositionY
+        
+        '''
+
+        psdFinalChargeX = [-999,-999]
+        psdFinalChargeY = [-999,-999]
+
+        #psdFinalChargeX_corr = [-999,-999]
+        #psdFinalChargeY_corr = [-999,-999]
+
+        psdFinalChargeX_proj = [-999,-999]
+        psdFinalChargeY_proj = [-999,-999]
+
+        psdX_pathlength = [-999,-999]
+        psdY_pathlength = [-999,-999]
+
+        psdX_position = [-999,-999]
+        psdY_position = [-999,-999]
+         
+        PsdEC_tmpX = 0.
+        PsdEC_tmpY = 0.
+
+        for ipsd in xrange(0,2):
+            
+            if(len(psdChargeY[ipsd]) > 0):
+                pos_max_len = np.argmax(psdPathlengthY[ipsd])
+                lenghtY = [-99999.,-99999.]
+                array_lenghtY = array('d',lenghtY)
+                test_pos = False 
+                if not opts.mc:
+                    test_pos = DmpVSvc.gPsdECor.GetPathLengthPosition(psdGIDY[ipsd][pos_max_len],track_sel.getDirection(),track_sel.getImpactPoint(), array_lenghtY)
+                 
+                '''   
+                PsdEC_tmpY = -1.
+                if test_pos:
+                    PsdEC_tmpY = DmpVSvc.gPsdECor.GetPsdECorSp3(psdGIDY[ipsd][pos_max_len], array_lenghtY[0])
+                '''
+
+                psdFinalChargeY[ipsd] = psdChargeY[ipsd][pos_max_len]
+                h_psd_ChargeY[ipsd].Fill(psdFinalChargeY[ipsd])
+                #psdFinalChargeY_corr[ipsd] = psdChargeY[ipsd][pos_max_len]*PsdEC_tmpY
+                psdFinalChargeY_proj[ipsd] = array_lenghtY[0]
+                psdY_pathlength[ipsd] = array_lenghtY[1]
+                psdY_position[ipsd] =  psdPositionY[ipsd][pos_max_len]   
+                
+
+
+            if(len(psdChargeX[ipsd]) > 0):  
+                pos_max_len = np.argmax(psdPathlengthX[ipsd])
+                lenghtX = [-99999.,-99999.]
+                array_lenghtX = array('d',lenghtX)
+                test_pos = False 
+                
+                if not opts.mc:
+                    test_pos = DmpVSvc.gPsdECor.GetPathLengthPosition(psdGIDX[ipsd][pos_max_len],track_sel.getDirection(),track_sel.getImpactPoint(), array_lenghtY)
+                '''    
+                PsdEC_tmpY = -1.
+                if test_pos:
+                    PsdEC_tmpX = DmpVSvc.gPsdECor.GetPsdECorSp3(psdGIDX[ipsd][pos_max_len], array_lenghtX[0])
+                '''
+                psdFinalChargeX[ipsd] = psdChargeX[ipsd][pos_max_len]
+                h_psd_ChargeX[ipsd].Fill(psdFinalChargeX[ipsd])
+                #psdFinalChargeX_corr[ipsd] = psdChargeX[ipsd][pos_max_len]*PsdEC_tmpX
+                psdFinalChargeX_proj[ipsd] = array_lenghtX[0]
+                psdX_pathlength[ipsd] = array_lenghtX[1]
+                psdX_position[ipsd] =  psdPositionX[ipsd][pos_max_len] 
+
+
+
+
+
+
+
+
 
 
     ### Writing output files to file
@@ -501,6 +677,12 @@ def findElectrons(opts):
 
         h_stk_chargeClusterX.Write()
         h_stk_chargeClusterY.Write()
+
+        h_psd_ChargeX[0].Write()
+        h_psd_ChargeX[1].Write()
+
+        h_psd_ChargeY[0].Write()
+        h_psd_ChargeY[1].Write()
 
         tf_skim.Close()
 
